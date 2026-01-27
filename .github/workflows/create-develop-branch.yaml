@@ -1,0 +1,113 @@
+# This file was generated using Kotlin DSL (.github/workflows/create-develop-branch.main.kts).
+# If you want to modify the workflow, please change the Kotlin file and regenerate this YAML file.
+# Generated with https://github.com/typesafegithub/github-workflows-kt
+
+name: 'Prepare Next Development Cycle'
+on:
+  workflow_call:
+    inputs:
+      backend_folder:
+        description: 'The backend folder to build'
+        type: 'string'
+        required: false
+        default: 'backend'
+      frontend_folder:
+        description: 'The frontend folder to build'
+        type: 'string'
+        required: false
+        default: 'frontend'
+      java_version:
+        description: 'The Java version to use'
+        type: 'string'
+        required: false
+        default: '25'
+      node_version:
+        description: 'The Node version to use'
+        type: 'string'
+        required: false
+        default: '24.12.0'
+    secrets:
+      GH_TOKEN:
+        description: 'GitHub token with permissions to create branches and pull requests'
+        required: true
+jobs:
+  prepare-next-dev-cycle:
+    runs-on: 'ubuntu-latest'
+    steps:
+    - id: 'step-0'
+      name: 'Print event name'
+      run: 'echo Event name: ${{ github.event_name }}'
+    - id: 'step-1'
+      name: 'Checkout'
+      uses: 'actions/checkout@v4'
+      with:
+        ref: 'master'
+        fetch-depth: '0'
+    - id: 'step-2'
+      name: 'Check if develop branch exists'
+      run: |-
+        if git ls-remote --exit-code --heads origin develop; then
+          echo "Branch 'develop' already exists. Cancelling workflow."
+          exit 1
+        fi
+    - id: 'step-3'
+      name: 'Setup Java'
+      uses: 'actions/setup-java@v4'
+      with:
+        java-version: '${{ inputs.java_version }}'
+        distribution: 'temurin'
+    - id: 'step-4'
+      name: 'Setup Node'
+      uses: 'actions/setup-node@v4'
+      with:
+        node-version: '${{ inputs.node_version }}'
+    - id: 'step-5'
+      name: 'Configure Git'
+      run: |-
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+    - id: 'step-6'
+      name: 'Create develop branch'
+      run: |-
+        BRANCH_NAME="develop"
+        git checkout -b $BRANCH_NAME
+        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+    - id: 'step-7'
+      name: 'Bump backend version'
+      run: |-
+        # Use input or default to 'backend'
+        BACKEND_FOLDER="${{ inputs.backend_folder || 'backend' }}"
+        cd $BACKEND_FOLDER
+
+        # Use Maven versions plugin to bump patch version
+        mvn versions:set -DnextSnapshot=true
+        mvn versions:commit
+    - id: 'step-8'
+      name: 'Bump frontend version'
+      run: |-
+        # Use input or default to 'frontend'
+        FRONTEND_FOLDER="${{ inputs.frontend_folder || 'frontend' }}"
+        cd $FRONTEND_FOLDER
+        npm version prerelease --preid=snapshot --no-git-tag-version
+    - id: 'step-9'
+      name: 'Commit changes'
+      run: |-
+        git add .
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+          exit 0
+        fi
+        git commit -m "chore: prepare next development cycle"
+    - id: 'step-10'
+      name: 'Push branch'
+      run: 'git push origin $BRANCH_NAME'
+    - id: 'step-11'
+      name: 'Create Pull Request'
+      env:
+        GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+      run: |-
+        gh pr create \
+          --title "chore: prepare next development cycle" \
+          --body "Automated PR to bump versions after release tag ${{ github.ref_name }}" \
+          --base master \
+          --head $BRANCH_NAME

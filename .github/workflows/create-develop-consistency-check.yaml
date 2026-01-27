@@ -1,0 +1,15 @@
+name: 'Check YAML consistency for create-develop-branch'
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/create-develop-branch.**'
+  push:
+    branches:
+      - 'master'
+    paths:
+      - '.github/workflows/create-develop-branch.**'
+jobs:
+  check_yaml_consistency:
+    uses: konczdam/shared-workflows/.github/workflows/check-yaml-consistency.yaml@master
+    with:
+      file_name: create-develop-branch
