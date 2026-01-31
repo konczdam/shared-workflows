@@ -21,13 +21,6 @@ val GITHUB_TOKEN by Contexts.secrets
 
 workflow(
     name = "Prepare Next Development Cycle",
-//    consistencyCheckJobConfig = ConsistencyCheckJobConfig.Configuration(
-//        condition = expr { "${github.event_name} != 'workflow_call'" },
-//        env = DEFAULT_CONSISTENCY_CHECK_JOB_CONFIG.env,
-//        checkoutActionVersion = DEFAULT_CONSISTENCY_CHECK_JOB_CONFIG.checkoutActionVersion,
-//        additionalSteps = DEFAULT_CONSISTENCY_CHECK_JOB_CONFIG.additionalSteps,
-//        useLocalBindingsServerAsFallback = DEFAULT_CONSISTENCY_CHECK_JOB_CONFIG.useLocalBindingsServerAsFallback
-//    ),
     consistencyCheckJobConfig = ConsistencyCheckJobConfig.Disabled,
     on = listOf(
         WorkflowCall(
@@ -36,35 +29,22 @@ workflow(
                     description = "The backend folder to build",
                     required = false,
                     default = "backend",
-                    type = WorkflowCall.Type.String
+                    type = WorkflowCall.Type.String,
                 ),
                 "frontend_folder" to WorkflowCall.Input(
                     description = "The frontend folder to build",
                     required = false,
                     default = "frontend",
-                    type = WorkflowCall.Type.String
+                    type = WorkflowCall.Type.String,
                 ),
-                "java_version" to WorkflowCall.Input(
-                    description = "The Java version to use",
-                    required = false,
-                    default = "25",
-                    type = WorkflowCall.Type.String
-                ),
-                "node_version" to WorkflowCall.Input(
-                    description = "The Node version to use",
-                    required = false,
-                    default = "24.12.0",
-                    type = WorkflowCall.Type.String
-                )
             ),
             secrets = mapOf(
                 "GH_TOKEN" to WorkflowCall.Secret(
                     description = "GitHub token with permissions to create branches and pull requests",
-                    required = true
-                )
-            )
-
-        )
+                    required = true,
+                ),
+            ),
+        ),
     ),
     sourceFile = __FILE__,
 ) {
@@ -80,7 +60,7 @@ workflow(
             name = "Checkout",
             action = Checkout(
                 ref = "master",
-                fetchDepth = Checkout.FetchDepth.Value(0)
+                fetchDepth = Checkout.FetchDepth.Value(0),
             )
         )
 
@@ -91,22 +71,23 @@ workflow(
                   echo "Branch 'develop' already exists. Cancelling workflow."
                   exit 1
                 fi
-            """.trimIndent()
+            """.trimIndent(),
         )
 
         uses(
             name = "Setup Java",
             action = SetupJava(
-                javaVersion = expr { "inputs.java_version" },
-                distribution = SetupJava.Distribution.Temurin
-            )
+                distribution = SetupJava.Distribution.Temurin,
+                cache = SetupJava.BuildPlatform.Maven,
+                javaVersionFile = expr { "inputs.backend_folder" } + "/.java-version",
+            ),
         )
 
         uses(
             name = "Setup Node",
             action = SetupNode(
-                nodeVersion = expr { "inputs.node_version" },
-            )
+                nodeVersionFile = expr { "inputs.frontend_folder" } + "/.nvmrc"
+            ),
         )
 
         run(
@@ -114,7 +95,7 @@ workflow(
             command = """
                 git config user.name "github-actions[bot]"
                 git config user.email "github-actions[bot]@users.noreply.github.com"
-            """.trimIndent()
+            """.trimIndent(),
         )
 
         run(
@@ -123,7 +104,7 @@ workflow(
                 BRANCH_NAME="develop"
                 git checkout -b "${'$'}BRANCH_NAME"
                 echo "BRANCH_NAME=${'$'}BRANCH_NAME" >> "${'$'}GITHUB_ENV"
-            """.trimIndent()
+            """.trimIndent(),
         )
 
         run(
@@ -136,7 +117,7 @@ workflow(
                 # Use Maven versions plugin to bump patch version
                 mvn versions:set -DnextSnapshot=true
                 mvn versions:commit
-            """.trimIndent()
+            """.trimIndent(),
         )
 
         run(
@@ -146,7 +127,7 @@ workflow(
                 FRONTEND_FOLDER="${'$'}{{ inputs.frontend_folder || 'frontend' }}"
                 cd ${'$'}FRONTEND_FOLDER
                 npm version prerelease --preid=snapshot --no-git-tag-version
-            """.trimIndent()
+            """.trimIndent(),
         )
 
         run(
@@ -158,14 +139,14 @@ workflow(
                   exit 0
                 fi
                 git commit -m "chore: prepare next development cycle"
-            """.trimIndent()
+            """.trimIndent(),
         )
 
         run(
             name = "Push branch",
             command = """
                 git push origin "${'$'}BRANCH_NAME"
-            """.trimIndent()
+            """.trimIndent(),
         )
 
         run(
@@ -179,7 +160,7 @@ workflow(
                   --body "Automated PR to bump versions after release tag ${'$'}{{ github.ref_name }}" \
                   --base master \
                   --head "${'$'}BRANCH_NAME"
-            """.trimIndent()
+            """.trimIndent(),
         )
     }
 }

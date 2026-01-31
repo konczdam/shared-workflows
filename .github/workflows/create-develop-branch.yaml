@@ -16,16 +16,6 @@ on:
         type: 'string'
         required: false
         default: 'frontend'
-      java_version:
-        description: 'The Java version to use'
-        type: 'string'
-        required: false
-        default: '25'
-      node_version:
-        description: 'The Node version to use'
-        type: 'string'
-        required: false
-        default: '24.12.0'
     secrets:
       GH_TOKEN:
         description: 'GitHub token with permissions to create branches and pull requests'
@@ -54,13 +44,14 @@ jobs:
       name: 'Setup Java'
       uses: 'actions/setup-java@v4'
       with:
-        java-version: '${{ inputs.java_version }}'
+        java-version-file: '${{ inputs.backend_folder }}/.java-version'
         distribution: 'temurin'
+        cache: 'maven'
     - id: 'step-4'
       name: 'Setup Node'
       uses: 'actions/setup-node@v4'
       with:
-        node-version: '${{ inputs.node_version }}'
+        node-version-file: '${{ inputs.frontend_folder }}/.nvmrc'
     - id: 'step-5'
       name: 'Configure Git'
       run: |-
