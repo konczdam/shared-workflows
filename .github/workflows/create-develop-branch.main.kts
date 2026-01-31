@@ -121,8 +121,8 @@ workflow(
             name = "Create develop branch",
             command = """
                 BRANCH_NAME="develop"
-                git checkout -b ${'$'}BRANCH_NAME
-                echo "BRANCH_NAME=${'$'}BRANCH_NAME" >> ${'$'}GITHUB_ENV
+                git checkout -b "${'$'}BRANCH_NAME"
+                echo "BRANCH_NAME=${'$'}BRANCH_NAME" >> "${'$'}GITHUB_ENV"
             """.trimIndent()
         )
 
@@ -164,7 +164,7 @@ workflow(
         run(
             name = "Push branch",
             command = """
-                git push origin ${'$'}BRANCH_NAME
+                git push origin "${'$'}BRANCH_NAME"
             """.trimIndent()
         )
 
@@ -178,9 +178,8 @@ workflow(
                   --title "chore: prepare next development cycle" \
                   --body "Automated PR to bump versions after release tag ${'$'}{{ github.ref_name }}" \
                   --base master \
-                  --head ${'$'}BRANCH_NAME
+                  --head "${'$'}BRANCH_NAME"
             """.trimIndent()
         )
-
     }
 }

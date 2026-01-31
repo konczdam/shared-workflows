@@ -2,6 +2,11 @@ name: 'Check YAML consistency'
 on:
   workflow_call:
     inputs:
+      pyflakes:
+        description: 'Whether to run pyflakes check'
+        type: 'boolean'
+        required: false
+        default: false
       file_name:
         description: 'The name of the file to check consistency for without extension'
         type: 'string'
@@ -19,3 +24,10 @@ jobs:
     - id: 'step-2'
       name: 'Consistency check'
       run: 'git diff --exit-code ''.github/workflows/${{ inputs.file_name }}.yaml'''
+    - id: 'step-3'
+      name: 'Validate workflow with actionlint'
+      uses: 'raven-actions/actionlint@v2'
+      with:
+        files: '.github/workflows/${{ inputs.file_name }}.yaml'
+        fail-on-error: true
+        pyflakes: '${{ inputs.pyflakes }}'

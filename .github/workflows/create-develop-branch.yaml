@@ -70,8 +70,8 @@ jobs:
       name: 'Create develop branch'
       run: |-
         BRANCH_NAME="develop"
-        git checkout -b $BRANCH_NAME
-        echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+        git checkout -b "$BRANCH_NAME"
+        echo "BRANCH_NAME=$BRANCH_NAME" >> "$GITHUB_ENV"
     - id: 'step-7'
       name: 'Bump backend version'
       run: |-
@@ -100,7 +100,7 @@ jobs:
         git commit -m "chore: prepare next development cycle"
     - id: 'step-10'
       name: 'Push branch'
-      run: 'git push origin $BRANCH_NAME'
+      run: 'git push origin "$BRANCH_NAME"'
     - id: 'step-11'
       name: 'Create Pull Request'
       env:
@@ -110,4 +110,4 @@ jobs:
           --title "chore: prepare next development cycle" \
           --body "Automated PR to bump versions after release tag ${{ github.ref_name }}" \
           --base master \
-          --head $BRANCH_NAME
+          --head "$BRANCH_NAME"

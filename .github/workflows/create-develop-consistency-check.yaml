@@ -1,5 +1,6 @@
 name: 'Check YAML consistency for create-develop-branch'
 on:
+  workflow_dispatch: {}
   pull_request:
     paths:
       - '.github/workflows/create-develop-branch.**'
@@ -13,3 +14,4 @@ jobs:
     uses: konczdam/shared-workflows/.github/workflows/check-yaml-consistency.yaml@master
     with:
       file_name: create-develop-branch
+      pyflakes: false
