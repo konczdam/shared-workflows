@@ -1,0 +1,94 @@
+# This file was generated using Kotlin DSL (.github/workflows/validate-backend.main.kts).
+# If you want to modify the workflow, please change the Kotlin file and regenerate this YAML file.
+# Generated with https://github.com/typesafegithub/github-workflows-kt
+
+name: 'Validate Backend'
+on:
+  workflow_call:
+    inputs:
+      backend_folder:
+        description: 'Path to the backend application'
+        type: 'string'
+        required: false
+        default: 'backend'
+      start_postgres:
+        description: 'Whether to start and configure a local PostgreSQL instance (set to ''true'' or ''false'')'
+        type: 'string'
+        required: false
+        default: 'false'
+      db_user:
+        description: 'Database username'
+        type: 'string'
+        required: false
+        default: 'admin'
+      db_password:
+        description: 'Database password'
+        type: 'string'
+        required: false
+        default: 'password'
+      db_name:
+        description: 'Database name'
+        type: 'string'
+        required: false
+        default: 'app_db'
+      run_linter:
+        description: 'Whether to run the linter/ktlint (set to ''true'' or ''false'')'
+        type: 'string'
+        required: false
+        default: 'true'
+      linter_command:
+        description: 'The command to run for linting'
+        type: 'string'
+        required: false
+        default: './mvnw ktlint:check'
+      build_command:
+        description: 'The command to build the application'
+        type: 'string'
+        required: false
+        default: './mvnw clean install -Denvironment=github_workflow'
+jobs:
+  validate:
+    runs-on: 'ubuntu-latest'
+    steps:
+    - id: 'step-0'
+      name: 'Checkout'
+      uses: 'actions/checkout@v4'
+    - id: 'step-1'
+      name: 'Setup Java'
+      uses: 'actions/setup-java@v4'
+      with:
+        java-version-file: '${{ inputs.backend_folder }}/.java-version'
+        distribution: 'temurin'
+    - id: 'step-2'
+      name: 'Cache Maven dependencies'
+      uses: 'actions/cache@v4'
+      with:
+        path: '~/.m2/repository'
+        key: 'maven-${{ runner.os }}-${{ hashFiles(format(''{0}/**/pom.xml'', inputs.backend_folder)) }}'
+        restore-keys: 'maven-${{ runner.os }}-'
+    - id: 'step-3'
+      name: 'Run Linter'
+      working-directory: '${{ inputs.backend_folder }}'
+      run: '${{ inputs.linter_command }}'
+      if: '${{ inputs.run_linter == ''true'' }}'
+    - id: 'step-4'
+      name: 'Start and Configure PostgreSQL'
+      env:
+        DB_USER: '${{ inputs.db_user }}'
+        DB_PASSWORD: '${{ inputs.db_password }}'
+        DB_NAME: '${{ inputs.db_name }}'
+      run: |-
+        sudo systemctl start postgresql.service
+        pg_isready
+
+        # Configure Postgres
+        sudo -u postgres createuser -s -d -r -w "$DB_USER"
+        sudo -u postgres psql -c "ALTER ROLE $DB_USER WITH PASSWORD '$DB_PASSWORD';"
+        sudo -u postgres createdb -O "$DB_USER" "$DB_NAME"
+
+        echo "PostgreSQL started and database '$DB_NAME' created for user '$DB_USER'"
+      if: '${{ inputs.start_postgres == ''true'' }}'
+    - id: 'step-5'
+      name: 'Build Backend'
+      working-directory: '${{ inputs.backend_folder }}'
+      run: '${{ inputs.build_command }}'

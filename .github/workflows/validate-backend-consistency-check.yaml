@@ -1,0 +1,17 @@
+name: 'Check YAML consistency for validate-backend'
+on:
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - '.github/workflows/validate-backend.**'
+  push:
+    branches:
+      - 'master'
+    paths:
+      - '.github/workflows/validate-backend.**'
+jobs:
+  check_yaml_consistency:
+    uses: konczdam/shared-workflows/.github/workflows/check-yaml-consistency.yaml@master
+    with:
+      file_name: validate-backend
+      pyflakes: false
