@@ -1,0 +1,106 @@
+# This file was generated using Kotlin DSL (.github/workflows/create-release-commit.main.kts).
+# If you want to modify the workflow, please change the Kotlin file and regenerate this YAML file.
+# Generated with https://github.com/typesafegithub/github-workflows-kt
+
+name: 'Create Release Commit'
+on:
+  workflow_call:
+    inputs:
+      backend_folder:
+        description: 'The backend folder'
+        type: 'string'
+        required: false
+        default: 'backend'
+      frontend_folder:
+        description: 'The frontend folder'
+        type: 'string'
+        required: false
+        default: 'frontend'
+      backend_bump_type:
+        description: 'Bump type for backend (major, minor, patch)'
+        type: 'string'
+        required: false
+        default: 'patch'
+      frontend_bump_type:
+        description: 'Bump type for frontend (major, minor, patch)'
+        type: 'string'
+        required: false
+        default: 'patch'
+    secrets:
+      GH_TOKEN:
+        description: 'GitHub token to push changes'
+        required: true
+jobs:
+  create-release-commit:
+    runs-on: 'ubuntu-latest'
+    steps:
+    - id: 'step-0'
+      name: 'Checkout'
+      uses: 'actions/checkout@v4'
+      with:
+        fetch-depth: '0'
+    - id: 'step-1'
+      name: 'Setup Java'
+      uses: 'actions/setup-java@v4'
+      with:
+        java-version-file: '${{ inputs.backend_folder }}/.java-version'
+        distribution: 'temurin'
+        cache: 'maven'
+    - id: 'step-2'
+      name: 'Setup Node'
+      uses: 'actions/setup-node@v4'
+      with:
+        node-version-file: '${{ inputs.frontend_folder }}/.nvmrc'
+    - id: 'step-3'
+      name: 'Configure Git'
+      run: |-
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+    - id: 'step-4'
+      name: 'Bump backend version'
+      run: |-
+        cd "${{ inputs.backend_folder }}"
+        BUMP_TYPE="${{ inputs.backend_bump_type }}"
+
+        # Get current version (e.g., 1.2.3-SNAPSHOT)
+        FULL_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+
+        # Fix SC2001 & SC2086: Use Bash parameter expansion to strip suffix
+        # This is faster and safer than echo | sed
+        CURRENT_VERSION="${FULL_VERSION%-SNAPSHOT}"
+
+        IFS='.' read -ra ADDR <<< "${CURRENT_VERSION}"
+        MAJOR="${ADDR[0]}"
+        MINOR="${ADDR[1]}"
+        PATCH="${ADDR[2]}"
+
+        if [ "$BUMP_TYPE" == "major" ]; then
+          NEW_VERSION="$((MAJOR+1)).0.0"
+        elif [ "$BUMP_TYPE" == "minor" ]; then
+          NEW_VERSION="${MAJOR}.$((MINOR+1)).0"
+        else
+          # For 'patch', we use the current version numbers without the SNAPSHOT suffix
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+        fi
+
+        echo "Releasing backend version: ${NEW_VERSION} (from ${FULL_VERSION})"
+        mvn versions:set -DnewVersion="${NEW_VERSION}" -DgenerateBackupPoms=false
+        mvn versions:commit
+    - id: 'step-5'
+      name: 'Bump frontend version'
+      run: |-
+        cd ${{ inputs.frontend_folder }}
+        echo "Bumping frontend via npm version ${{ inputs.frontend_bump_type }}"
+        npm version ${{ inputs.frontend_bump_type }} --no-git-tag-version
+    - id: 'step-6'
+      name: 'Commit and Push'
+      env:
+        GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+      run: |-
+        git add .
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+          exit 0
+        fi
+        git commit -m "chore: release version bump"
+        git push origin HEAD:${{ github.ref_name }}

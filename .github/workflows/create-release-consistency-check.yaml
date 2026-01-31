@@ -1,0 +1,17 @@
+name: 'Check YAML consistency for create-release-commit'
+on:
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - '.github/workflows/create-release-commit.**'
+  push:
+    branches:
+      - 'master'
+    paths:
+      - '.github/workflows/create-release-commit.**'
+jobs:
+  check_yaml_consistency:
+    uses: konczdam/shared-workflows/.github/workflows/check-yaml-consistency.yaml@master
+    with:
+      file_name: create-release-commit
+      pyflakes: false
