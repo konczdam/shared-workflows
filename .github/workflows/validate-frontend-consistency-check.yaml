@@ -1,0 +1,17 @@
+name: 'Check YAML consistency for validate-frontend'
+on:
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - '.github/workflows/validate-frontend.**'
+  push:
+    branches:
+      - 'master'
+    paths:
+      - '.github/workflows/validate-frontend.**'
+jobs:
+  check_yaml_consistency:
+    uses: konczdam/shared-workflows/.github/workflows/check-yaml-consistency.yaml@master
+    with:
+      file_name: validate-frontend
+      pyflakes: false

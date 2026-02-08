@@ -1,0 +1,79 @@
+# This file was generated using Kotlin DSL (.github/workflows/validate-frontend.main.kts).
+# If you want to modify the workflow, please change the Kotlin file and regenerate this YAML file.
+# Generated with https://github.com/typesafegithub/github-workflows-kt
+
+name: 'Validate Frontend'
+on:
+  workflow_call:
+    inputs:
+      frontend_folder:
+        description: 'Path to the frontend application'
+        type: 'string'
+        required: false
+        default: 'frontend'
+      post_lint_comment:
+        description: 'Whether to post a PR comment on lint failure (''true'' or ''false'')'
+        type: 'string'
+        required: false
+        default: 'false'
+      install_command:
+        description: 'Command to install dependencies'
+        type: 'string'
+        required: false
+        default: 'npm ci'
+      build_command:
+        description: 'Command to build the production app'
+        type: 'string'
+        required: false
+        default: 'npm run build'
+      lint_command:
+        description: 'Command to check for lint errors'
+        type: 'string'
+        required: false
+        default: 'npm run lint-check'
+jobs:
+  validate:
+    runs-on: 'ubuntu-latest'
+    steps:
+    - id: 'step-0'
+      name: 'Checkout'
+      uses: 'actions/checkout@v4'
+    - id: 'step-1'
+      name: 'Setup Node'
+      uses: 'actions/setup-node@v4'
+      with:
+        node-version-file: '${{ inputs.frontend_folder }}/.nvmrc'
+    - id: 'step-2'
+      name: 'Cache NPM dependencies'
+      uses: 'actions/cache@v4'
+      with:
+        path: '~/.npm'
+        key: 'npm-${{ runner.os }}-${{ hashFiles(format(''{0}/package-lock.json'', inputs.frontend_folder)) }}'
+        restore-keys: 'npm-${{ runner.os }}-'
+    - id: 'step-3'
+      name: 'Install dependencies'
+      working-directory: '${{ inputs.frontend_folder }}'
+      run: '${{ inputs.install_command }}'
+    - id: 'step-4'
+      name: 'Build production frontend'
+      working-directory: '${{ inputs.frontend_folder }}'
+      run: '${{ inputs.build_command }}'
+    - id: 'lint-step'
+      name: 'Run lint check'
+      continue-on-error: true
+      working-directory: '${{ inputs.frontend_folder }}'
+      run: '${{ inputs.lint_command }}'
+    - id: 'step-6'
+      name: 'Comment on lint errors'
+      continue-on-error: true
+      uses: 'actions/github-script@v7'
+      with:
+        script: |-
+          github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: 'The frontend build passed, but there are lint errors. Please fix them before merging. You can use `npm run lint` to fix them automatically.'
+          })
+        github-token: '${{ secrets.GITHUB_TOKEN }}'
+      if: '${{ inputs.post_lint_comment == ''true'' && steps.lint-step.outcome == ''failure'' }}'
