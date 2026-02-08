@@ -17,7 +17,7 @@ import io.github.typesafegithub.workflows.dsl.expressions.expr
 import io.github.typesafegithub.workflows.dsl.workflow
 import io.github.typesafegithub.workflows.yaml.ConsistencyCheckJobConfig
 
-val GITHUB_TOKEN by Contexts.secrets
+val GH_TOKEN by Contexts.secrets
 
 workflow(
     name = "Create Release Commit",
@@ -68,6 +68,7 @@ workflow(
             name = "Checkout",
             action = Checkout(
                 fetchDepth = Checkout.FetchDepth.Value(0),
+                token = expr { GH_TOKEN },
             )
         )
 
@@ -140,7 +141,7 @@ workflow(
         run(
             name = "Commit and Push",
             env = mapOf(
-                "GH_TOKEN" to expr { GITHUB_TOKEN }
+                "GH_TOKEN" to expr { GH_TOKEN }
             ),
             command = """
                 git add .

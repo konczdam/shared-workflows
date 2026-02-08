@@ -38,6 +38,7 @@ jobs:
       name: 'Checkout'
       uses: 'actions/checkout@v4'
       with:
+        token: '${{ secrets.GH_TOKEN }}'
         fetch-depth: '0'
     - id: 'step-1'
       name: 'Setup Java'
@@ -95,7 +96,7 @@ jobs:
     - id: 'step-6'
       name: 'Commit and Push'
       env:
-        GH_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+        GH_TOKEN: '${{ secrets.GH_TOKEN }}'
       run: |-
         git add .
         if git diff --staged --quiet; then
